@@ -1,2 +1,4 @@
-./data/*.ttl
-./data/*.rdf
+.env
+data/*
+!data/.gitkeep
+virtuoso/

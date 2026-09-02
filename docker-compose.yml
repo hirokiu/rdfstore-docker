@@ -1,10 +1,24 @@
-version: '3'
 services:
   store:
-    image: openlink/virtuoso-opensource-7:latest
-    ports: ["${VIRTUOSO_WEB_PORT}:80","${VIRTUOSO_HTTP_PORT}:8890","127.0.0.1:${VIRTUOSO_ISQL_PORT}:1111"]
+    image: ${VIRTUOSO_IMAGE:-openlink/virtuoso-opensource-7:7.2.17-r24-g49d82bd-ubuntu}
+    container_name: rdfstore-${VIRTUOSO_HTTP_PORT:-8890}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${VIRTUOSO_HTTP_PORT:-8890}:8890"
     environment:
-            DBA_PASSWORD: ${VIRTUOSO_ADMIN_PASSWD:?Set VIRTUOSO_ADMIN_PASSWD in .env file or pass as environment variable e.g. VIRTUOSO_ADMIN_PASSWD=YourSecretPass docker-compose up}
+      DBA_PASSWORD: ${VIRTUOSO_ADMIN_PASSWORD:?Set VIRTUOSO_ADMIN_PASSWORD in .env}
+      RDF_DEFAULT_GRAPH: ${RDF_DEFAULT_GRAPH:?Set RDF_DEFAULT_GRAPH in .env}
+      VIRT_PARAMETERS_DIRSALLOWED: ".,/data"
+      VIRT_PARAMETERS_NUMBEROFBUFFERS: ${VIRT_PARAMETERS_NUMBEROFBUFFERS:-170000}
+      VIRT_PARAMETERS_MAXDIRTYBUFFERS: ${VIRT_PARAMETERS_MAXDIRTYBUFFERS:-130000}
     volumes:
-      - ${VIRTUOSO_DATABASE_DIR}:/opt/virtuoso-opensource/database
-      - ${DATA_DIR}:/usr/share/proj
+      - ${VIRTUOSO_DATABASE_DIR:-./virtuoso}:/database
+      - ${RDF_DATA_DIR:-./data}:/data:ro
+      - ./initdb.d:/initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /database/.rdf-load-complete && isql 1111 dba \"$$DBA_PASSWORD\" verbose=off banner=off prompt=off errors=stdout exec='select 1;' | grep -q 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    stop_grace_period: 5m
