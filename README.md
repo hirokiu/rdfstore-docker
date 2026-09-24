@@ -96,6 +96,15 @@ docker compose -p rdfstore-secondary --env-file secondary.env up -d
 
 `VIRT_PARAMETERS_NUMBEROFBUFFERS` と `VIRT_PARAMETERS_MAXDIRTYBUFFERS` はホストのRAMに合わせて調整してください。DBディレクトリには高速なローカルストレージを使用し、入力データとDB、transaction log、checkpointに必要な空き容量を確保してください。
 
+公開運用時のtransaction log肥大化を避けるため、デフォルトでは15分ごとのcheckpointに加え、transaction logが8 GiBを超えた場合にもcheckpointを開始します。
+
+```dotenv
+VIRT_PARAMETERS_CHECKPOINTINTERVAL=15
+VIRT_PARAMETERS_AUTOCHECKPOINTLOGSIZE=8589934592
+```
+
+大量投入ツールがcheckpointを一時的に無効化する場合は、投入完了後に`checkpoint;`を実行し、`checkpoint_interval (15);`で定期checkpointを明示的に再有効化してください。
+
 ## バージョン更新
 
 Virtuosoイメージは再現性のため完全なタグに固定しています。新しい版は別ポート・別DBディレクトリでロードとクエリを検証してから、ホスト側のproxyを切り替えてください。
